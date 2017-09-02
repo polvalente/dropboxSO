@@ -64,11 +64,13 @@ def get_list(user, psswd):
     if (auth(user, psswd) != 'True'): return "User not authorized"
     raise NotImplementedError
 
-@app.route('/<user>/<psswd>/download', methods=['POST'])
+@app.route('/<user>/<psswd>/download/<item>', methods=['GET'])
 def download(user, psswd):
-    '''Essa função retorna o conteúdo do arquivo pedido em um objeto JSON'''
+    '''Return the content of a requested file'''
     if (auth(user, psswd) != 'True'): return "User not authorized"
-    raise NotImplementedError
+    filepath = server_path(user+'/'+item)
+    return send_file(filepath)
+
 
 @app.route('/<user>/<psswd>/upload', methods=['POST'])
 def upload(user, psswd):
