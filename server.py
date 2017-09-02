@@ -8,26 +8,35 @@ import os
 import urllib
 app = Flask(__name__)
 
+
+def server_path(s): 
+    if (s[0] == '/'):
+        s = s[1:]
+    return './myDropboxServer/' + s
+
 @app.route('/<user>/<psswd>/create')
 def create(user, psswd):
     '''Create new user'''
     try:
-        users = pickle.load(open('./myDroboxServer/users.p','rb'))
+        users = pickle.load(open(server_path('users.p'),'rb'))
     except:
+        f = open(server_path('users.p'),'wb')
+        f.close()
         users = {}
 
     if user in users:
-        #usuario ja existe
+        print 'User already exists'
         return 'False'
     
-    try:
-        os.makedirs('./myDropboxServer/'+user+'/')
-    except:
-        return 'False'
+    if not os.path.exists(server_path(user+'/')):
+        try:
+            os.makedirs(server_path(user+'/'))
+        except:
+            return 'False'
     
-    #criando o usuario
+    #creating user
     users[user] = {'password': psswd}
-    pickle.dump(user, open('./myDroboxServer/user.p', 'rb'))
+    pickle.dump(users, open(server_path('users.p'), 'wb'))
     return 'True'
 
 @app.route('/<user>/<psswd>/auth')
@@ -35,19 +44,18 @@ def auth(user, psswd):
     '''Authorize a user''' 
 
     try:
-        users = pickle.load(open('./myDroboxServer/users.p','rb'))
+        users = pickle.load(open(server_path('users.p'),'rb'))
     except:
         users = {}
 
     if user not in users:
-        #usuario nao existe
+        print('user doesnt exist')
         return 'False'
 
     if users[user]['password'] != psswd: 
-        #usuario existe, mas a senha está errada
+        print 'Wrong password'
         return 'False'
 
-    #Se chegou aqui, o usuario existe e está autorizado 
     return 'True'
 
 @app.route('/<user>/<psswd>/list')
@@ -75,4 +83,6 @@ def delete(user, psswd, item):
     raise NotImplementedError
 
 if __name__ == '__main__':
+    if not os.path.exists('./myDropboxServer'):
+        os.makedirs('./myDropboxServer/')
     app.run(host='127.0.0.1')
