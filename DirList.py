@@ -20,20 +20,31 @@ class DirList(object):
         return {'path': path, 'level': level, 'type': t} 
 
     def list(self):
-        '''This method returns a list of dictionaries of the form:
+        '''This method returns lists (dir_list, file_list) of dictionaries of the form:
             {
                 path:STRING,
                 level: INT,
                 type: 'dir'/'file'
             }'''
+        #lists start empty
         dir_list = []
         file_list = []
+
+        #walking the directory tree with the os.walk() call
         for path, dirs, files in os.walk(self.root_dir):
+            #in each iteration, 'path' is one of the subdirectories
+            
+            #'dirs' contains a list of directories inside. We don't need if because we are going to traverse them anyway
+            #append current dir to the list
             dir_list.append(self.item(path, 'dir'))
+
+            #for each file in 'files', we build its corresponding item
+            #the resulting list is extended into file_list
             file_list += map(lambda f: self.item(str(path)+'/'+f, 'file'), files)
         return (dir_list, file_list)
 
 if __name__ == "__main__":
+    #Test program. This won't be run when we import this module.
     lister = DirList('.')
     (dirs, files) = lister.list()
     print 'DIRS:'
