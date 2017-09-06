@@ -60,7 +60,7 @@ def auth(user, psswd):
 
 @app.route('/<user>/<psswd>/list')
 def get_list(user, psswd):
-    '''Função que retorna um objeto JSON que descreve a lista de arquivos do servidor'''
+    '''Send local directory structure to user'''
     if (auth(user, psswd) != 'True'): return "User not authorized"
     raise NotImplementedError
 
@@ -74,13 +74,13 @@ def download(user, psswd):
 
 @app.route('/<user>/<psswd>/upload', methods=['POST'])
 def upload(user, psswd):
-    '''Essa função recebe um novo arquivo do cliente como um objeto JSON'''
+    '''Receive a file from a client'''
     if (auth(user, psswd) != 'True'): return "User not authorized"
     raise NotImplementedError
 
 @app.route('/<user>/<psswd>/delete', methods=['POST'])
 def delete(user, psswd, item):
-    '''Essa função apaga o arquivo especificado pelo cliente através de um objeto JSON'''
+    '''Erase file specified by client'''
     if (auth(user, psswd) != 'True'): return "User not authorized"
     raise NotImplementedError
 
