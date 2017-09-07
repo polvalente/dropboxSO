@@ -14,18 +14,18 @@ class DirList(object):
     def item(self, path, t):
         '''This method returns a dict that contains information (path, type and level) about a file or directory
             level refers to the depth of the item in the file tree'''
-        level = path.count('/') 
+        level = path.count('/') - self.root_dir.count('/')
         if (t == 'file'):
             level -= 1
-        return {'path': path, 'level': level, 'type': t} 
+        return path, {'level': level, 'type': t}
 
     def list(self):
-        '''This method returns lists (dir_list, file_list) of dictionaries of the form:
-            {
-                path:STRING,
+        '''This method returns dicts (dir_dict, file_dict) of dictionaries of the form:
+            path: {
                 level: INT,
                 type: 'dir'/'file'
-            }'''
+            }
+        '''
         #lists start empty
         dir_list = []
         file_list = []
@@ -36,12 +36,20 @@ class DirList(object):
             
             #'dirs' contains a list of directories inside. We don't need if because we are going to traverse them anyway
             #append current dir to the list
-            dir_list.append(self.item(path, 'dir'))
+            dir_list.append(path)
 
             #for each file in 'files', we build its corresponding item
             #the resulting list is extended into file_list
-            file_list += map(lambda f: self.item(str(path)+'/'+f, 'file'), files)
-        return (dir_list, file_list)
+            file_list += map(lambda f: str(path)+'/'+f, files)
+        
+        dir_data = map(lambda d: self.item(d, 'dir')[1], dir_list)
+        file_data = map(lambda f: self.item(f, 'file')[1], file_list)
+
+        dir_dict = dict(zip(dir_list, dir_data))
+        file_dict = dict(zip(file_list, file_data))
+
+
+        return (dir_dict, file_dict)
 
 if __name__ == "__main__":
     #Test program. This won't be run when we import this module.

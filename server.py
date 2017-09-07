@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Servidor do Clone do Dropbox
-from flask import Flask, send_file, request
+from flask import Flask, send_file, request, jsonify
 from datetime import datetime
 import cPickle as pickle
 import os
 import urllib
+from DirList import DirList
+import json
 app = Flask(__name__)
 
 
@@ -59,10 +61,26 @@ def auth(user, psswd):
     return 'True'
 
 @app.route('/<user>/<psswd>/list')
-def get_list(user, psswd):
+def list(user, psswd):
     '''Send local directory structure to user'''
-    if (auth(user, psswd) != 'True'): return "User not authorized"
-    raise NotImplementedError
+    files = []
+    dirs = []
+    data = {'auth':False,
+            'files':files,
+            'dirs': dirs}
+    if (auth(user, psswd) != 'True'):
+        resp = json.dumps(data)
+        return resp
+
+    files, dirs = DirList(server_path(user)).list()        
+    data['auth'] = True
+    data['files'] = files
+    data['dirs'] = dirs
+
+    resp = json.dumps(data)
+    return resp
+
+
 
 @app.route('/<user>/<psswd>/download/<item>', methods=['GET'])
 def download(user, psswd):

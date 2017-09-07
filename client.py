@@ -4,6 +4,8 @@
 import os, hashlib, urllib, pickle, requests, time
 from getpass import getpass
 from shutil import copyfile
+from DirList import DirList
+import json
 
 # configs
 url = 'http://127.0.0.1:5000' # servidor
@@ -13,24 +15,27 @@ sleep_time = 5
 request_url = ""
 user = ""
 psswd = ""
+user_path = ""
 
 def create(user, psswd):
     '''Create user'''
     try:
-        created = eval(urllib.urlopen(request_url+'/create').read())
-    except:
+        response = urllib.urlopen(request_url+'/create')
+        created = eval(response.read())
+    except Exception as e:
         created = False
-        print "Exception: '"+str(Exception)+"'"
+        print "Exception: '"+str(e)+"'"
     return created
 
 def auth(user, psswd):
     '''Verify if user is authorized'''
     authorized = False
     try:
-        authorized = eval(urllib.urlopen(request_url+'/auth').read())
-    except:
+        response = urllib.urlopen(request_url+'/auth')
+        authorized = eval(response.read())
+    except Exception as e:
         authorized = False
-        print "Exception: '"+str(Exception)+"'"
+        print "Exception: '"+str(e)+"'"
 
     if not authorized:
         print "User is not authorized"
@@ -39,21 +44,21 @@ def auth(user, psswd):
     
 def download(user, psswd, name, data):
     '''Request file from server'''
+    global user_path
     
     if (auth(user, psswd) != 'True'): print "User not authorized"
 
     if data['type'] == 'file':
         print "Downloading file '"+name+"'"
     try:
-        userpath = './myDropbox/'+user+'/'
-        if not os.path.exists(userpath):
-            os.makedirs(userpath)
+        if not os.path.exists(user_path):
+            os.makedirs(user_path)
 
         if data['type'] == 'dir':
-            os.makedirs(userpath+item)
+            os.makedirs(user_path+item)
         else:
             url = request_url+'/'+urllib.quote_plus(name)
-            urllib.urlretrieve(url, filename=userpath+item)
+            urllib.urlretrieve(url, filename=user_path+item)
     except:
         return "Unable to download file '"+name+"'"
     return
@@ -95,20 +100,37 @@ def decide(user, psswd, changes):
         elif changes[k]['status'] == 'Delete server': delete_server(user, psswd, k, changes[k])
         elif changes[k]['status'] == 'Delete local': delete_local(user, psswd, k, changes[k])
 
-def update(user, psswd, server, local):
+def get_local_items():
+    local_files, local_dirs = lister.list()
+    items = local_files[:] + local_dirs[:]
+    return items, old_local 
+
+def get_server_items():
+    if (auth(user, psswd) != 'True'): print "User not authorized"
+    r = urllib.urlopen(request_url+'/list')
+    r = r.read()
+    data = json.loads(r)
+    print 'files:', data['files']
+    print 'dirs:', data['dirs']
+    print 'auth:', data['auth']
+
+    l = data['files'] + data['dirs'] 
+    return l, old_server 
+    
+
+def update(user, psswd):
     '''Verify differences between server and local to decide what to do'''
 
     if (auth(user, psswd) != 'True'): print "User not authorized"
 
     #get local file list (local) and previous probe list (old_local)
-    local, old_local = get_local_files() 
+    local, old_local = get_local_items() 
     #get server file list (server) and previous probe list (old_server)
-    server, old_server = get_server_files()
+    server, old_server = get_server_items()
 
     changes = {}
 
-    elements = server.keys() + local.keys()
-    element_data = server.values() + local.values()
+    elements = server + local
     
     #compare both
     #decide what to do
@@ -144,7 +166,6 @@ def update(user, psswd, server, local):
     
 
     #do things
-    dirs, files = split_file_list(changes)
     decide(user, psswd, dirs)
     decide(user, psswd, files)
 
@@ -155,21 +176,23 @@ def update(user, psswd, server, local):
 
 def main():
     '''Main function'''
-    global request_url, user, psswd
+    global request_url, user, psswd, user_path, lister
     logged = False
 
     #loop for user authorization/creation
     while not logged:
         user = raw_input("Usuario: ")
         psswd = hashlib.sha512(getpass("Senha: ")).hexdigest()
+        request_url = url+'/'+user+'/'+psswd
         
         #if user/psswd fails auth, try to create new user/psswd
         logged = auth(user, psswd) or create(user, psswd)
 
-    request_url = url+'/'+user+'/'+psswd
 
-    update_logintimes(user) # update user current_login and last_login
+    #update_logintimes(user) # update user current_login and last_login
 
+    user_path = './myDropbox/'+user
+    lister = DirList(user_path)
     #main loop
     while(True):
         #verifies current dir state with a periodic probe
@@ -179,6 +202,7 @@ def main():
 
 
 if __name__ == "__main__": 
+    #try to load old_local and old_server from files
     old_local = {}
     old_server = {}
     main()
