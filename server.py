@@ -90,10 +90,17 @@ def download(user, psswd):
     return send_file(filepath)
 
 
-@app.route('/<user>/<psswd>/upload', methods=['POST'])
+@app.route('/<user>/<psswd>/upload/<ftype>', methods=['POST'])
 def upload(user, psswd):
     '''Receive a file from a client'''
     if (auth(user, psswd) != 'True'): return "User not authorized"
+    
+    if ftype == 'file':
+        #file
+        pass
+    else:
+        #dir
+        pass
     raise NotImplementedError
 
 @app.route('/<user>/<psswd>/delete', methods=['POST'])

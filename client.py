@@ -69,8 +69,10 @@ def upload(user, psswd, name, data):
     if (auth(user, psswd) != 'True'): print "User not authorized"
 
     print "Sending file: '", name, "'"
-    content = open(name, 'rb')
-    r = requests.post(request_url, files[{name:content}])
+    content = None
+    if data['type'] == 'file':
+        content = open(name, 'rb')
+    r = requests.post(request_url+'/upload/'+data['type'], files[{name:content}])
     content.close() 
     return r.ok
 
@@ -102,7 +104,8 @@ def decide(user, psswd, changes):
 
 def get_local_items():
     local_files, local_dirs = lister.list()
-    items = local_files[:] + local_dirs[:]
+    items = local_files.copy()
+    items.update(local_dirs)
     return items, old_local 
 
 def get_server_items():
@@ -114,7 +117,8 @@ def get_server_items():
     print 'dirs:', data['dirs']
     print 'auth:', data['auth']
 
-    l = data['files'] + data['dirs'] 
+    l = data['files'].copy()
+    l.update(data['dirs'])
     return l, old_server 
     
 
@@ -130,14 +134,15 @@ def update(user, psswd):
 
     changes = {}
 
-    elements = server + local
+    keys = server.keys() + local.keys()
+    vals = server.values() + local.values()
     
     #compare both
     #decide what to do
 
     #item_list['item_path'] == {'level': int, 'type':'dir'/'file'}
-    for index in xrange(len(files)):
-        item = files[index] # item == element path
+    for index in xrange(len(keys)):
+        item = keys[index] # item == element path
         changes[item] = {'status': None, 'type': None, 'level': None}
         #status: what to do
         #type: dir/file
@@ -163,9 +168,13 @@ def update(user, psswd):
         elif (item not in local) and (item in old_local):
             changes[item]['status'] = 'Delete server'
         
-    
+    #select (key, val) pairs that are of type 'file' and then transform back into a dict
 
-    #do things
+    l = zip(changes.keys(), changes.values())
+
+    files = dict(filter(lambda p: p[1]['type'] == 'file', l))
+    dirs = dict(filter(lambda p: p[1]['type'] == 'dir', l))
+
     decide(user, psswd, dirs)
     decide(user, psswd, files)
 
