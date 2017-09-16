@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Servidor do Clone do Dropbox
+#Dropbox Clone Server
 from flask import Flask, send_file, request, jsonify
 from datetime import datetime
 import cPickle as pickle
@@ -8,6 +8,7 @@ import os
 import urllib
 from DirList import DirList
 import json
+import re
 app = Flask(__name__)
 
 
@@ -19,6 +20,10 @@ def server_path(s):
 @app.route('/<user>/<psswd>/create')
 def create(user, psswd):
     '''Create new user'''
+    res = {'auth': False}
+    s = re.compile('\W')
+    if(s.search(user) is not None): #user is not alphanumeric
+        return json.dumps(res)
     try:
         users = pickle.load(open(server_path('users.p'),'rb'))
     except:
@@ -28,22 +33,24 @@ def create(user, psswd):
 
     if user in users:
         print 'User already exists'
-        return 'False'
+        return json.dumps(res)
     
     if not os.path.exists(server_path(user+'/')):
         try:
             os.makedirs(server_path(user+'/'))
         except:
-            return 'False'
+            return json.dumps(res)
     
     #creating user
     users[user] = {'password': psswd}
     pickle.dump(users, open(server_path('users.p'), 'wb'))
-    return 'True'
+    res['auth'] = True
+    return json.dumps(res)
 
 @app.route('/<user>/<psswd>/auth')
 def auth(user, psswd):
     '''Authorize a user''' 
+    res = {'auth': False}
 
     try:
         users = pickle.load(open(server_path('users.p'),'rb'))
@@ -51,41 +58,46 @@ def auth(user, psswd):
         users = {}
 
     if user not in users:
-        print('user doesnt exist')
-        return 'False'
+        print('user does not exist')
+        return json.dumps(res)
 
     if users[user]['password'] != psswd: 
         print 'Wrong password'
-        return 'False'
+        return json.dumps(res)
 
-    return 'True'
+    res['auth'] = True
+    return json.dumps(res)
+
+def local_auth(user, psswd):
+    r = auth(user, psswd)
+    r = json.loads(r)
+    return r['auth']
 
 @app.route('/<user>/<psswd>/list')
 def list(user, psswd):
     '''Send local directory structure to user'''
     files = []
     dirs = []
-    data = {'auth':False,
+    res = {'auth':False,
             'files':files,
             'dirs': dirs}
-    if (auth(user, psswd) != 'True'):
-        resp = json.dumps(data)
-        return resp
+    if (not local_auth(user, psswd)):
+        return json.dumps(res)
 
     files, dirs = DirList(server_path(user)).list()        
-    data['auth'] = True
-    data['files'] = files
-    data['dirs'] = dirs
+    res['auth'] = True
+    res['files'] = files
+    res['dirs'] = dirs
 
-    resp = json.dumps(data)
-    return resp
+    return json.dumps(res)
 
 
 
 @app.route('/<user>/<psswd>/download/<item>', methods=['GET'])
 def download(user, psswd):
     '''Return the content of a requested file'''
-    if (auth(user, psswd) != 'True'): return "User not authorized"
+    res = {'auth': False}
+    if (not local_auth(user, psswd)): return json.dumps{res}
     filepath = server_path(user+'/'+item)
     return send_file(filepath)
 
@@ -93,7 +105,8 @@ def download(user, psswd):
 @app.route('/<user>/<psswd>/upload/<ftype>', methods=['POST'])
 def upload(user, psswd):
     '''Receive a file from a client'''
-    if (auth(user, psswd) != 'True'): return "User not authorized"
+    res = {'auth': False}
+    if (not local_auth(user, psswd)): return json.dumps{res}
     
     if ftype == 'file':
         #file
@@ -106,7 +119,8 @@ def upload(user, psswd):
 @app.route('/<user>/<psswd>/delete', methods=['POST'])
 def delete(user, psswd, item):
     '''Erase file specified by client'''
-    if (auth(user, psswd) != 'True'): return "User not authorized"
+    res = {'auth': False}
+    if (not local_auth(user, psswd)): return json.dumps{res}
     raise NotImplementedError
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Cliente do Clone do Dropbox
+#Dropbox Clone Client
 import os, hashlib, urllib, pickle, requests, time
 from getpass import getpass
 from shutil import copyfile
@@ -21,7 +21,8 @@ def create(user, psswd):
     '''Create user'''
     try:
         response = urllib.urlopen(request_url+'/create')
-        created = eval(response.read())
+        created = json.loads(response)
+        created = created['auth']
     except Exception as e:
         created = False
         print "Exception: '"+str(e)+"'"
@@ -32,7 +33,8 @@ def auth(user, psswd):
     authorized = False
     try:
         response = urllib.urlopen(request_url+'/auth')
-        authorized = eval(response.read())
+        response = json.loads(response)
+        authorized = response['auth']
     except Exception as e:
         authorized = False
         print "Exception: '"+str(e)+"'"
@@ -46,7 +48,7 @@ def download(user, psswd, name, data):
     '''Request file from server'''
     global user_path
     
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
 
     if data['type'] == 'file':
         print "Downloading file '"+name+"'"
@@ -66,7 +68,7 @@ def download(user, psswd, name, data):
 def upload(user, psswd, name, data):
     '''Send file to server'''
     
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
 
     print "Sending file: '", name, "'"
     content = None
@@ -79,14 +81,14 @@ def upload(user, psswd, name, data):
 def delete_server(user, psswd, name, data):
     '''Erase file from server'''
     
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
     
     raise NotImplementedError
 
 def delete_local(user, psswd, name, data):
     '''Erase file from current directory'''
     
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
     
     raise NotImplementedError
 
@@ -109,7 +111,7 @@ def get_local_items():
     return items, old_local 
 
 def get_server_items():
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
     r = urllib.urlopen(request_url+'/list')
     r = r.read()
     data = json.loads(r)
@@ -125,7 +127,7 @@ def get_server_items():
 def update(user, psswd):
     '''Verify differences between server and local to decide what to do'''
 
-    if (auth(user, psswd) != 'True'): print "User not authorized"
+    if (not auth(user, psswd)): print "User not authorized"
 
     #get local file list (local) and previous probe list (old_local)
     local, old_local = get_local_items() 
