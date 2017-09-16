@@ -14,10 +14,11 @@ class DirList(object):
     def item(self, path, t):
         '''This method returns a dict that contains information (path, type and level) about a file or directory
             level refers to the depth of the item in the file tree'''
-        level = path.count('/') - self.root_dir.count('/')
+        level = path.count('/') #- self.root_dir.count('/')
+        mod_time = int(os.path.getmtime(self.root_dir+path))
         if (t == 'file'):
             level -= 1
-        return path, {'level': level, 'type': t}
+        return path, {'level': level, 'type': t, 'time': mod_time}
 
     def list(self):
         '''This method returns dicts (dir_dict, file_dict) of dictionaries of the form:
@@ -36,18 +37,18 @@ class DirList(object):
             
             #'dirs' contains a list of directories inside. We don't need if because we are going to traverse them anyway
             #append current dir to the list
-            dir_list.append(path)
+            if(path != self.root_dir):
+                dir_list.append(path[len(self.root_dir):])
 
             #for each file in 'files', we build its corresponding item
             #the resulting list is extended into file_list
-            file_list += map(lambda f: str(path)+'/'+f, files)
+            file_list += map(lambda f: str(path[len(self.root_dir):])+'/'+f, files)
         
         dir_data = map(lambda d: self.item(d, 'dir')[1], dir_list)
         file_data = map(lambda f: self.item(f, 'file')[1], file_list)
 
         dir_dict = dict(zip(dir_list, dir_data))
         file_dict = dict(zip(file_list, file_data))
-
 
         return (dir_dict, file_dict)
 

@@ -84,7 +84,7 @@ def list(user, psswd):
     if (not local_auth(user, psswd)):
         return json.dumps(res)
 
-    files, dirs = DirList(server_path(user)).list()        
+    dirs, files = DirList(server_path(user)).list()        
     res['auth'] = True
     res['files'] = files
     res['dirs'] = dirs
@@ -93,12 +93,14 @@ def list(user, psswd):
 
 
 
-@app.route('/<user>/<psswd>/download/<item>', methods=['GET'])
+@app.route('/<user>/<psswd>/download/', methods=['POST'])
 def download(user, psswd):
     '''Return the content of a requested file'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps{res}
-    filepath = server_path(user+'/'+item)
+    if (not local_auth(user, psswd)): return json.dumps(res)
+
+    fname = request.form['name']
+    filepath = server_path(user+fname)
     return send_file(filepath)
 
 
@@ -106,7 +108,7 @@ def download(user, psswd):
 def upload(user, psswd):
     '''Receive a file from a client'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps{res}
+    if (not local_auth(user, psswd)): return json.dumps(res)
     
     if ftype == 'file':
         #file
@@ -117,10 +119,10 @@ def upload(user, psswd):
     raise NotImplementedError
 
 @app.route('/<user>/<psswd>/delete', methods=['POST'])
-def delete(user, psswd, item):
+def delete(user, psswd):
     '''Erase file specified by client'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps{res}
+    if (not local_auth(user, psswd)): return json.dumps(res)
     raise NotImplementedError
 
 if __name__ == '__main__':
