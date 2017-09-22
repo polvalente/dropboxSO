@@ -15,10 +15,9 @@ backup_time = 15*60 # 15 minutes
 
 request_url = ""
 user = ""
-psswd = ""
 user_path = ""
 
-def create(user, psswd):
+def create(user):
     '''Create user'''
     try:
         response = urllib.urlopen(request_url+'/create')
@@ -29,7 +28,7 @@ def create(user, psswd):
         print "Exception: '"+str(e)+"'"
     return created
 
-def auth(user, psswd):
+def auth(user):
     '''Verify if user is authorized'''
     authorized = False
     try:
@@ -50,11 +49,11 @@ def updateModTime(name, data):
     os.utime(user_path+name, (data['time']*1.0, data['time']*1.0))
 
 
-def download(user, psswd, name, data):
+def download(user, name, data):
     '''Request file from server'''
     global user_path
     
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
     print 'name:', name
     print 'data:', data
 
@@ -77,10 +76,10 @@ def download(user, psswd, name, data):
         return "Unable to download file '"+name+"'"
     return
     
-def upload(user, psswd, name, data):
+def upload(user, name, data):
     '''Send file to server'''
     
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
 
     print "Sending file: '", name, "'"
     content = None
@@ -90,21 +89,21 @@ def upload(user, psswd, name, data):
     content.close() 
     return r.ok
 
-def delete_server(user, psswd, name, data):
+def delete_server(user, name, data):
     '''Erase file from server'''
     
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
     
     raise NotImplementedError
 
-def delete_local(user, psswd, name, data):
+def delete_local(user, name, data):
     '''Erase file from current directory'''
     
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
     
     raise NotImplementedError
 
-def decide(user, psswd, changes):
+def decide(user, changes):
     for x in changes:
         k = x[0]
         if x[1]['status'] == 'Conflict':
@@ -112,10 +111,10 @@ def decide(user, psswd, changes):
             #create conflict copy
             copyfile(k, k+'_conflict'+time.strftime("-%d-%m-%Y-%H-%M-%S"))
 
-        if x[1]['status'] == 'Download': download(user, psswd, k, x[1])
-        elif x[1]['status'] == 'Upload': upload(user, psswd, k, x[1])
-        elif x[1]['status'] == 'Delete server': delete_server(user, psswd, k, x[1])
-        elif x[1]['status'] == 'Delete local': delete_local(user, psswd, k, x[1])
+        if x[1]['status'] == 'Download': download(user, k, x[1])
+        elif x[1]['status'] == 'Upload': upload(user, k, x[1])
+        elif x[1]['status'] == 'Delete server': delete_server(user, k, x[1])
+        elif x[1]['status'] == 'Delete local': delete_local(user, k, x[1])
 
 def get_local_items():
     local_files, local_dirs = lister.list()
@@ -124,7 +123,7 @@ def get_local_items():
     return items 
 
 def get_server_items():
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
     r = urllib.urlopen(request_url+'/list')
     r = r.read()
     data = json.loads(r)
@@ -137,10 +136,10 @@ def get_server_items():
     return l 
     
 
-def update(user, psswd):
+def update(user):
     '''Verify differences between server and local to decide what to do'''
 
-    if (not auth(user, psswd)): print "User not authorized"
+    if (not auth(user)): print "User not authorized"
 
     #get local file list (local) and previous probe list (old_local)
     local = get_local_items() 
@@ -199,8 +198,8 @@ def update(user, psswd):
     dirs = map(list,zip(dirs.keys(), dirs.values()))
     dirs.sort(cmp=lambda x, y: cmp(x[1]['level'], y[1]['level']))
 
-    decide(user, psswd, dirs)
-    decide(user, psswd, files)
+    decide(user, dirs)
+    decide(user, files)
 
     for k in reversed(files):
         if k[1]['status'] == 'Download': 
@@ -214,33 +213,32 @@ def update(user, psswd):
     old_local = local
     return
 
-def load_user_data(user, psswd):
+def load_user_data(user):
     raise NotImplementedError
 
-def save_user_data(user, psswd):
+def save_user_data(user):
     global old_local, old_server
 
 
 def main():
     '''Main function'''
-    global request_url, user, psswd, user_path, lister, old_local, old_server
+    global request_url, user, user_path, lister, old_local, old_server
     logged = False
 
     #loop for user authorization/creation
     while not logged:
         user = raw_input("Usuario: ")
-        psswd = hashlib.sha512(getpass("Senha: ")).hexdigest()
-        request_url = url+'/'+user+'/'+psswd
+        request_url = url+'/'+user
         
-        #if user/psswd fails auth, try to create new user/psswd
-        logged = auth(user, psswd) or create(user, psswd)
+        #if user fails auth, try to create new user
+        logged = auth(user) or create(user)
 
 
     #update_logintimes(user) # update user current_login and last_login
 
     #try to load old_local and old_server from files
     time_last_save = time.time()
-    #old_local, old_server, time_last_save = load_user_data(user, psswd) 
+    #old_local, old_server, time_last_save = load_user_data(user) 
 
     user_path = './myDropbox/'+user
     lister = DirList(user_path)
@@ -248,7 +246,7 @@ def main():
     while(True):
         try:
         #verifies current dir state with a periodic probe
-            update(user, psswd)
+            update(user)
             time.sleep(sleep_time)
             t = time.time()
             if (t - time_last_save) > backup_time:
