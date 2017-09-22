@@ -17,8 +17,8 @@ def server_path(s):
         s = s[1:]
     return './myDropboxServer/' + s
 
-@app.route('/<user>/<psswd>/create')
-def create(user, psswd):
+@app.route('/<user>/create')
+def create(user):
     '''Create new user'''
     res = {'auth': False}
     s = re.compile('\W')
@@ -42,13 +42,13 @@ def create(user, psswd):
             return json.dumps(res)
     
     #creating user
-    users[user] = {'password': psswd}
+    users[user] = {'password': None}
     pickle.dump(users, open(server_path('users.p'), 'wb'))
     res['auth'] = True
     return json.dumps(res)
 
-@app.route('/<user>/<psswd>/auth')
-def auth(user, psswd):
+@app.route('/<user>/auth')
+def auth(user):
     '''Authorize a user''' 
     res = {'auth': False}
 
@@ -61,27 +61,23 @@ def auth(user, psswd):
         print('user does not exist')
         return json.dumps(res)
 
-    if users[user]['password'] != psswd: 
-        print 'Wrong password'
-        return json.dumps(res)
-
     res['auth'] = True
     return json.dumps(res)
 
-def local_auth(user, psswd):
-    r = auth(user, psswd)
+def local_auth(user):
+    r = auth(user)
     r = json.loads(r)
     return r['auth']
 
-@app.route('/<user>/<psswd>/list')
-def list(user, psswd):
+@app.route('/<user>/list')
+def list(user):
     '''Send local directory structure to user'''
     files = []
     dirs = []
     res = {'auth':False,
             'files':files,
             'dirs': dirs}
-    if (not local_auth(user, psswd)):
+    if (not local_auth(user)):
         return json.dumps(res)
 
     dirs, files = DirList(server_path(user)).list()        
@@ -93,22 +89,22 @@ def list(user, psswd):
 
 
 
-@app.route('/<user>/<psswd>/download/', methods=['POST'])
-def download(user, psswd):
+@app.route('/<user>/download/', methods=['POST'])
+def download(user):
     '''Return the content of a requested file'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps(res)
+    if (not local_auth(user)): return json.dumps(res)
 
     fname = request.form['name']
     filepath = server_path(user+fname)
     return send_file(filepath)
 
 
-@app.route('/<user>/<psswd>/upload/<ftype>', methods=['POST'])
-def upload(user, psswd):
+@app.route('/<user>/upload/<ftype>', methods=['POST'])
+def upload(user):
     '''Receive a file from a client'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps(res)
+    if (not local_auth(user)): return json.dumps(res)
     
     if ftype == 'file':
         #file
@@ -118,11 +114,11 @@ def upload(user, psswd):
         pass
     raise NotImplementedError
 
-@app.route('/<user>/<psswd>/delete', methods=['POST'])
-def delete(user, psswd):
+@app.route('/<user>/delete', methods=['POST'])
+def delete(user):
     '''Erase file specified by client'''
     res = {'auth': False}
-    if (not local_auth(user, psswd)): return json.dumps(res)
+    if (not local_auth(user)): return json.dumps(res)
     raise NotImplementedError
 
 if __name__ == '__main__':
