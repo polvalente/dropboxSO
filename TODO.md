@@ -1,20 +1,11 @@
 Client:
-
-- test upload
-- implement delete_server
-- implement delete_local
-- test decide (need to test for conflict resolution)
-- test update (need to test for conflict resolution; test for upload)
-- implement save_user_data
-- implement load_user_data
+- test delete_server
+- test delete_local
+- test decide (need to test for conflict resolution, delete_server, delete_local)
+- test update (need to test for conflict resolution, delete_server, delete_local)
 
 Server:
-
-- implement upload
-- implement delete
-- implement save_user_data
-- implement load_user_data
+- test delete
 
 Overall:
-
 - change auth procedure to cleanup request urls

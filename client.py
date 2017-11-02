@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #Dropbox Clone Client
-import os, hashlib, urllib, pickle, requests, time, sys
+import os, hashlib, urllib, pickle, requests, time, sys, shutil
 from getpass import getpass
 from shutil import copyfile
 from DirList import DirList
@@ -84,24 +84,31 @@ def upload(user, name, data):
     print "Sending file: '", name, "'"
     content = None
     if data['type'] == 'file':
-        content = open(name, 'rb')
-    r = requests.post(request_url+'/upload/'+data['type'], files[{name:content}])
-    content.close() 
+        content = open(user_path+name, 'rb')
+        r = requests.post(request_url+'/upload/'+data['type'], files={name:content}, data={'time':data['time']})
+        content.close() 
+        return r.ok
+    #else - data[type] == dir
+    r = requests.post(request_url+'/upload/'+data['type'], data={'name':name, 'time':data['time']})
     return r.ok
+
+
 
 def delete_server(user, name, data):
     '''Erase file from server'''
-    
     if (not auth(user)): print "User not authorized"
+    r = requests.post(request_url+'/delete', data={'name':name,'type':data['type']})
+    return r.ok
     
-    raise NotImplementedError
 
 def delete_local(user, name, data):
     '''Erase file from current directory'''
-    
     if (not auth(user)): print "User not authorized"
-    
-    raise NotImplementedError
+    if(data['type'] == 'dir'):
+        shutil.rmtree('./myDropbox/%s/%s' % (user, fname))
+    else:
+        os.remove('./myDropbox/%s/%s' % (user, fname))
+    return True
 
 def decide(user, changes):
     for x in changes:
@@ -214,11 +221,27 @@ def update(user):
     return
 
 def load_user_data(user):
-    raise NotImplementedError
+    try:
+        userData_path = '.users/'+user+'.p'
+        data = None
+        with open(userData_path, 'rb') as f:
+            data = pickle.load(f)
+        return data['local'], data['server'], data['time']
+    except:
+        return {}, {}, 0
 
-def save_user_data(user):
+
+def save_user_data(user, time_last_save):
     global old_local, old_server
+    userData_path = '.users/'+user+'.p'
+    data = {'local':old_local, 'server':old_server, 'time':time_last_save}
+    with open(userData_path, 'wb') as f:
+        pickle.dump(data, f)
 
+def update_logintimes(user, t):
+    global current_login, last_logout
+    current_login = time.time()
+    last_logout = t
 
 def main():
     '''Main function'''
@@ -234,11 +257,12 @@ def main():
         logged = auth(user) or create(user)
 
 
-    #update_logintimes(user) # update user current_login and last_login
 
     #try to load old_local and old_server from files
     time_last_save = time.time()
-    #old_local, old_server, time_last_save = load_user_data(user) 
+    old_local, old_server, time_last_save = load_user_data(user) 
+    update_logintimes(user, time_last_save) # update user current_login and last_login
+    print "Done loading."
 
     user_path = './myDropbox/'+user
     lister = DirList(user_path)
@@ -250,7 +274,7 @@ def main():
             time.sleep(sleep_time)
             t = time.time()
             if (t - time_last_save) > backup_time:
-                #save_user_data(user, time_last_save)
+                save_user_data(user, time_last_save)
                 time_last_save = t
         except KeyboardInterrupt:
             save_user_data(user, time_last_save)

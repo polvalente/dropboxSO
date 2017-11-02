@@ -9,6 +9,7 @@ import urllib
 from DirList import DirList
 import json
 import re
+import shutil
 app = Flask(__name__)
 
 
@@ -101,25 +102,51 @@ def download(user):
 
 
 @app.route('/<user>/upload/<ftype>', methods=['POST'])
-def upload(user):
+def upload(user, ftype):
     '''Receive a file from a client'''
     res = {'auth': False}
     if (not local_auth(user)): return json.dumps(res)
+    res['auth'] = True
     
+    print request.form
+    data = request.form
+    fpath = ''
     if ftype == 'file':
         #file
-        pass
+        for f in request.files:
+            fname = f
+            if fname[0] == '/':
+                fname = fname[1:]
+            fpath = './myDropboxServer/%s/%s' % (user, fname)
+            request.files[f].save(fpath)
     else:
         #dir
-        pass
-    raise NotImplementedError
+        fname = data['name']
+        if fname[0] == '/':
+            fname = fname[1:]
+        fpath = './myDropboxServer/%s/%s' % (user, fname)
+        if not os.path.exists(fpath):
+            os.makedirs(fpath)
+    
+    os.utime(fpath, (float(data['time'])*1.0, float(data['time'])*1.0))
+    return json.dumps(res)
 
 @app.route('/<user>/delete', methods=['POST'])
 def delete(user):
     '''Erase file specified by client'''
     res = {'auth': False}
     if (not local_auth(user)): return json.dumps(res)
-    raise NotImplementedError
+    res['auth'] = True
+    
+    data = request.form
+    fname = data['name']
+    if fname[0] == '/':
+            fname = fname[1:]
+    if(data['type'] == 'dir'):
+        shutil.rmtree('./myDropboxServer/%s/%s' % (user, fname))
+    else:
+        os.remove('./myDropboxServer/%s/%s' % (user, fname))
+    return json.dumps(res)
 
 if __name__ == '__main__':
     if not os.path.exists('./myDropboxServer'):
