@@ -46,10 +46,9 @@ def auth(user):
     
 def updateModTime(name, data):
     global user_path
-    stats = os.stat(user_path+name)
-    print "'%s'" % (user_path+name)
-
-    os.utime(user_path+name, (stats.st_atime, float(data['time'])))
+    print user_path+name
+    print data 
+    os.utime(user_path+name, (1.0*data['time'], 1.0*data['time']))
 
 
 def download(user, name, data):
@@ -206,6 +205,12 @@ def update(user):
             changes[item]['status'] = 'Delete local'
         if (item not in local) and (item in old_local):
             changes[item]['status'] = 'Delete server'
+
+        if (changes[item]['status'] == 'Download'):
+            changes[item]['time'] = server[item]['time']
+        if (changes[item]['status'] == 'Upload'):
+            changes[item]['time'] = local[item]['time']
+            
         
     #select (key, val) pairs that are of type 'file' and then transform back into a dict
 
