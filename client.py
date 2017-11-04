@@ -46,7 +46,10 @@ def auth(user):
     
 def updateModTime(name, data):
     global user_path
-    os.utime(user_path+name, (data['time']*1.0, data['time']*1.0))
+    stats = os.stat(user_path+name)
+    print "'%s'" % (user_path+name)
+
+    os.utime(user_path+name, (stats.st_atime, float(data['time'])))
 
 
 def download(user, name, data):
@@ -54,26 +57,25 @@ def download(user, name, data):
     global user_path
     
     if (not auth(user)): print "User not authorized"
-    print 'name:', name
-    print 'data:', data
 
-    if data['type'] == 'file':
-        print "Downloading file '"+name+"'"
-    try:
-        if not os.path.exists(user_path):
-            os.makedirs(user_path)
 
-        if data['type'] == 'dir':
-            print 'user_path:' , user_path
-            print 'u+i:', user_path+name
-            os.makedirs(user_path+name)
-            #os.utime(user_path+name, (data['time']*1.0, data['time']*1.0))
-        else:
-            url = request_url+'/download/'
-            urllib.urlretrieve(url, filename=user_path+name, data=urllib.urlencode({'name':name}))
-            #os.utime(user_path+name, (data['time']*1.0, data['time']*1.0))
-    except:
-        return "Unable to download file '"+name+"'"
+    #try:
+    if not os.path.exists(user_path):
+        os.makedirs(user_path)
+
+    if data['type'] == 'dir':
+        print 'user_path:' , user_path
+        print 'u+i:', user_path+name
+        os.makedirs(user_path+name)
+        print "Downloaded %s: '%s'" % (data['type'], name)
+    else:
+        if(os.path.exists(user_path+name)):
+            os.remove(user_path+name)
+        url = request_url+'/download/'
+        urllib.urlretrieve(url, filename=user_path+name, data=urllib.urlencode({'name':name}))
+        print "Downloaded %s: '%s'" % (data['type'], name)
+    #except:
+    #    return "Unable to download file '%s'" % (name)
     return
     
 def upload(user, name, data):
@@ -81,7 +83,7 @@ def upload(user, name, data):
     
     if (not auth(user)): print "User not authorized"
 
-    print "Sending file: '", name, "'"
+    print "Sending file: '%s'" % (name)
     content = None
     if data['type'] == 'file':
         content = open(user_path+name, 'rb')
@@ -104,10 +106,16 @@ def delete_server(user, name, data):
 def delete_local(user, name, data):
     '''Erase file from current directory'''
     if (not auth(user)): print "User not authorized"
+
+    fname = data['name']
+    if fname[0] == '/':
+            fname = fname[1:]
+    
     if(data['type'] == 'dir'):
         shutil.rmtree('./myDropbox/%s/%s' % (user, fname))
     else:
         os.remove('./myDropbox/%s/%s' % (user, fname))
+    print "Removing %s: '%s'" % (data['type'], name)
     return True
 
 def decide(user, changes):
@@ -116,7 +124,7 @@ def decide(user, changes):
         if x[1]['status'] == 'Conflict':
             x[1]['status'] = 'Download'
             #create conflict copy
-            copyfile(k, k+'_conflict'+time.strftime("-%d-%m-%Y-%H-%M-%S"))
+            copyfile(user_path+k, user_path+k+'_conflict'+time.strftime("-%d-%m-%Y-%H-%M-%S"))
 
         if x[1]['status'] == 'Download': download(user, k, x[1])
         elif x[1]['status'] == 'Upload': upload(user, k, x[1])
@@ -134,9 +142,6 @@ def get_server_items():
     r = urllib.urlopen(request_url+'/list')
     r = r.read()
     data = json.loads(r)
-    #print 'files:', data['files']
-    #print 'dirs:', data['dirs']
-    #print 'auth:', data['auth']
 
     l = data['files'].copy()
     l.update(data['dirs'])
@@ -145,6 +150,7 @@ def get_server_items():
 
 def update(user):
     '''Verify differences between server and local to decide what to do'''
+    global old_local, old_server
 
     if (not auth(user)): print "User not authorized"
 
@@ -152,6 +158,14 @@ def update(user):
     local = get_local_items() 
     #get server file list (server) and previous probe list (old_server)
     server = get_server_items()
+    #print 'local'
+    #print local
+    #print 'old_local'
+    #print old_local
+    #print 'server'
+    #print server
+    #print 'old_server'
+    #print old_server
 
     changes = {}
 
@@ -175,9 +189,9 @@ def update(user):
 
         if (item in local) and (item not in server):
             changes[item]['status'] = 'Upload'
-        elif (item not in local) and (item in server):
+        if (item not in local) and (item in server):
             changes[item]['status'] = 'Download'
-        elif (item in server) and (item in local):
+        if (item in server) and (item in local):
             #check for conflicts
             if (server[item]['time'] > local[item]['time']):
                 #file has been changed in server
@@ -188,9 +202,9 @@ def update(user):
                     changes[item]['status'] = 'Download'
             elif (server[item]['time'] < local[item]['time']):
                 changes[item]['status'] = 'Upload'
-        elif (item not in server) and (item in old_server):
+        if (item not in server) and (item in old_server):
             changes[item]['status'] = 'Delete local'
-        elif (item not in local) and (item in old_local):
+        if (item not in local) and (item in old_local):
             changes[item]['status'] = 'Delete server'
         
     #select (key, val) pairs that are of type 'file' and then transform back into a dict
