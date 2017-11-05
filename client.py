@@ -65,7 +65,8 @@ def download(user, name, data):
     if data['type'] == 'dir':
         print 'user_path:' , user_path
         print 'u+i:', user_path+name
-        os.makedirs(user_path+name)
+        if not os.path.exists(user_path+name):
+            os.makedirs(user_path+name)
         print "Downloaded %s: '%s'" % (data['type'], name)
     else:
         if(os.path.exists(user_path+name)):
@@ -82,7 +83,7 @@ def upload(user, name, data):
     
     if (not auth(user)): print "User not authorized"
 
-    print "Sending file: '%s'" % (name)
+    print "Sending %s: '%s'" % (data['type'], name)
     content = None
     if data['type'] == 'file':
         content = open(user_path+name, 'rb')
@@ -106,15 +107,18 @@ def delete_local(user, name, data):
     '''Erase file from current directory'''
     if (not auth(user)): print "User not authorized"
 
-    fname = data['name']
+    fname = name
     if fname[0] == '/':
             fname = fname[1:]
+
+    print "Removing %s: '%s'" % (data['type'], name)
+    if(not os.path.exists(user_path+'/'+fname)):
+        return True
     
     if(data['type'] == 'dir'):
-        shutil.rmtree('./myDropbox/%s/%s' % (user, fname))
+        shutil.rmtree(user_path+'/'+fname)
     else:
-        os.remove('./myDropbox/%s/%s' % (user, fname))
-    print "Removing %s: '%s'" % (data['type'], name)
+        os.remove(user_path+'/'+fname)
     return True
 
 def decide(user, changes):
@@ -181,7 +185,8 @@ def update(user):
         #status: what to do
         #type: dir/file
         #level: directory tree level
-
+        
+        changes[item]['status'] = None
         changes[item]['type'] = vals[index]['type']
         changes[item]['level'] = vals[index]['level']
         changes[item]['time'] = vals[index]['time']
@@ -206,7 +211,7 @@ def update(user):
         if (item not in local) and (item in old_local):
             changes[item]['status'] = 'Delete server'
 
-        if (changes[item]['status'] == 'Download'):
+        if (changes[item]['status'] == 'Download' or changes[item]['status'] == 'Conflict'):
             changes[item]['time'] = server[item]['time']
         if (changes[item]['status'] == 'Upload'):
             changes[item]['time'] = local[item]['time']
@@ -304,4 +309,8 @@ if __name__ == "__main__":
     global old_local, old_server
     old_local = {}
     old_server = {}
+    if(not os.path.exists('./myDropbox')):
+        os.makedirs('./myDropbox')
+    if(not os.path.exists('.users')):
+        os.makedirs('.users')
     main()
