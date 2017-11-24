@@ -5,7 +5,7 @@ Cloud storage system - Operational Systems Project
 
 # Project Proposal
 The proposed project is a cloud storage service. The minimum viable product (MVP) architecture consists of a single server, which allows multiple access through different instances of client application.
-The server will be a Web server with API REST. The client application doesn’t have a defined architecture yet, but, in addition to communicating with the server, it will provide a configuration interface for the user. For MVP, multiple user accounts don’t need to be implemented.
+The server will be a Web server with RESTful API. The client application doesn’t have a defined architecture yet, but, in addition to communicating with the server, it will provide a configuration interface for the user. For MVP, multiple user accounts don’t need to be implemented.
 
 # Requirements
 The synchronization and consistence between the server and the clients must be guaranteed. Moreover, the system must detect and warn the user when conflicts exists. A conflict occurs when two clients modify a same file at different times.
