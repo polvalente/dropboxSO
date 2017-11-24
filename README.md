@@ -1,5 +1,6 @@
 # dropboxSO
 Cloud storage system - Operational Systems Project
+Group: Arthur Petito, Bianca Modesto e Paulo Valente
 
 # IMPORTANT: There are no authentication nor identity-related security measures implemented
 
