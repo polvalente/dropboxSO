@@ -14,8 +14,9 @@ class DirList(object):
     def item(self, path, t):
         '''This method returns a dict that contains information (path, type and level) about a file or directory
             level refers to the depth of the item in the file tree'''
-        level = path.count('/') #- self.root_dir.count('/')
+        level = path.count('/') 
         mod_time = int(os.path.getmtime(self.root_dir+path))
+        #subtract from level item type is file, because of the way paths are generated
         if (t == 'file'):
             level -= 1
         return path, {'level': level, 'type': t, 'time': mod_time}
